@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using api.Models;
+using api.Data;
 
 namespace Name.Controllers
 {
@@ -13,27 +14,30 @@ namespace Name.Controllers
     [Route("api/[controller]")]
     public class PersonController : ControllerBase
     {
-        private static List<Person> persons = new List<Person>();
-        private static int currentId = 1;
+        private readonly ApplicationDBContext _context;
+        public PersonController(ApplicationDBContext context)
+        {
+            _context = context;
+        }
 
         [HttpPost]
-        public IActionResult CreatePerson([FromBody] Person person)
+        public async Task<IActionResult> CreatePerson([FromBody] Person person)
         {
             if (string.IsNullOrWhiteSpace(person.FirstName) || string.IsNullOrWhiteSpace(person.LastName))
             {
                 return BadRequest("First name and last name are required.");
             }
 
-            person.Id = currentId++;
-            persons.Add(person);
+            _context.Persons.Add(person);
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetPersonById), new { id = person.Id }, person);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetPersonById(int id)
+        public async Task<IActionResult> GetPersonById(int id)
         {
-            var person = persons.FirstOrDefault(p => p.Id == id);
+            var person = await _context.Persons.FindAsync(id);
             if (person == null)
             {
                 return NotFound();
@@ -42,5 +46,6 @@ namespace Name.Controllers
             return Ok(person);
         }
     }
+
 }
 
